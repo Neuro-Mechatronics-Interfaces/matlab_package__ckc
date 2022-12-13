@@ -1,18 +1,18 @@
-function data = reader(filepath,filename,array_id,varargin)
+function data = reader(filepath,filename,~,varargin)
 %READER reads surface EMG acquired by TMSi-SAGA and arbitrary textile (monopolar 32-channel) surface array.
 % 
 % SYNTAX:
-%   data = ckc.reader(filepath, filename, array_id,'Name', value, ...);
+%   data = ckc.reader(filepath, filename, epoch_length, 'Name', value, ...);
 %
 % INPUTS:
-%   - filepath: directory with the SIG file to be loaded. DEFAULT: `pwd`
-%   - filename: EMG file to be loaded. DEFAULT: 'test.mat'
-%   - array_id: Should be 1 | 2 | 3 | 4 (numeric scalar) indicating which
-%               textile is to be read. This will only read/use data from 32
-%               channels at a time, corresponding to one of the textile
-%               arrays from any given recording. DEFAULT: 3 
-%                   (distal forelimb extrinsic wrist extensors)
+%   - filepath: directory with the SIG file to be loaded.
+%   - filename: EMG file to be loaded.
 %   - varargin: (Optional) 'Name',value input argument pairs
+%       - 'array_id': Should be 1 | 2 | 3 | 4 (numeric scalar) indicating 
+%               which textile is to be read. This will only read/use data 
+%               from 32 channels at a time, corresponding to one of the 
+%               textile arrays from any given recording. DEFAULT: 3 
+%                   (distal forelimb extrinsic wrist extensors)
 %       - 'montage'     : default is 'MONO'
 %       - 'IED'         : default is 8 (mm)
 %       - 'fsamp'       : default is 4000 (samples/sec)
@@ -49,32 +49,21 @@ function data = reader(filepath,filename,array_id,varargin)
 %
 % Adapted: Max Murphy 2022-12-13
 
-if nargin < 1
-    filepath = pwd;
-end
-
-if nargin < 2
-    filename = 'test.mat';
-end
-
-if nargin < 3
-    array_id = 3;
-end
-
-p = inputParser();
-p.addOptional(p, 'montage', 'MONO');
-p.addOptional(p, 'IED', 8);
-p.addOptional(p, 'fsamp', 4000);
-p.addOptional(p, 'AUXChannels', []);
-p.addOptional(p, 'description', 'No description given.');
-p.addOptional(p, 'ref_signal', []);
+p = inputParser;
+p.addParameter('array_id', 3);
+p.addParameter('montage', 'MONO');
+p.addParameter('IED', 8);
+p.addParameter('fsamp', 4000);
+p.addParameter('AUXchannels', []);
+p.addParameter('description', 'No description given.');
+p.addParameter('ref_signal', []);
 p.parse(varargin{:});
 
 f=load([filepath filename]); 
 
 % Textile array indexing:
 [grid_crds(:,1), grid_crds(:,2)] = ind2sub([8,4], 1:32);
-i_elec = (1:32) + ((array_id-1) * 32);
+i_elec = (1:32) + ((p.Results.array_id-1) * 32);
 
 data.SIG = {};
 for ii=1:numel(i_elec) % electrode array     
@@ -83,7 +72,7 @@ end
 data.signal_length = size(f.uni, 2);
 
 if isempty(p.Results.ref_signal)
-    if array_id > 2
+    if p.Results.array_id > 2
         data.ref_signal = f.sync(2,:);
     else
         data.ref_signal = f.sync(1,:);
