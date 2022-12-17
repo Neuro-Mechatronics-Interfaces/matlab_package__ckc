@@ -24,8 +24,8 @@ p.addParameter('IED', 8.75);
 p.addParameter('fsamp', 4000);
 p.addParameter('generated_data_folder', generated_data_folder);
 p.addParameter('raw_data_folder', raw_data_folder);
-p.addParameter('name_expr_cal', '%s_CKC-Cal_Array-%d.mat');
-p.addParameter('name_expr_full', '%s_CKC-Full_Array-%d.mat');
+p.addParameter('name_expr', '%s_CKC-Array-%d_%d.mat');
+p.addParameter('ckc_reader_name', 'CKC_reader_max_tmsi_preprocessed.m');
 p.parse(varargin{:});
 generated_data_folder = p.Results.generated_data_folder;
 raw_data_folder = p.Results.raw_data_folder;
@@ -60,73 +60,49 @@ desc_locs = horzcat(about.SAGA.A.Location, about.SAGA.B.Location);
 grid_crds = nan(32, 1);
 [grid_crds(:,1), grid_crds(:,2)] = ind2sub([8,4], 1:32);
 
-C = T(iCal,:);
-nTotal = size(C,1);
-fprintf(1,'Saving calibration files...000%%\n');
-for ii = 1:n_textiles
-    SIG = cell(8,4);
-    uni = [];
-    ref_signal = [];
-    AUXchannels = [];
-    description = strrep(strrep(char(desc_locs(ii)), ' (', ' - '), ')', '');
-    i_elec = (1:32) + ((ii-1) * 32);
-    i_prog = (ii/n_textiles)*100;
-    for iC = 1:nTotal
-        data = io.load_wrist_event_table_trial(C(iC,:), ...
-            'raw_data_folder', raw_data_folder, ...
-            'generated_data_folder', generated_data_folder);
-        uni = horzcat(uni, data.uni(i_elec,:)); %#ok<AGROW> 
-        ref_signal = horzcat(ref_signal, sqrt(double(data.x).^2 + double(data.y).^2)); %#ok<AGROW> 
-        AUXchannels = horzcat(AUXchannels, [double(data.x); double(data.y); double(data.sync)]); %#ok<AGROW> 
-        fprintf(1,'\b\b\b\b\b%03d%%\n', round(i_prog * (iC / nTotal)));
-    end
-    uni = double(uni);
-    signal_length = size(uni,2);
-    r = rms(uni, 2);
-    iBad = find(r >= (mean(r) + 2*std(r)));
-    iGood = setdiff(1:32, iBad);
-    uni(iBad,:) = zeros(numel(iBad), signal_length);
-    uni(iGood,:) = uni(iGood,:) - mean(uni(iGood,:), 1);
-    for ik = 1:32
-        SIG{grid_crds(ik,1), grid_crds(ik,2)} = uni(ik, :);
-    end
-    save(fullfile(generated_data_folder, SUBJ, tank,  sprintf(p.Results.name_expr_cal, tank, ii)), 'SIG', 'signal_length', 'ref_signal', 'AUXchannels', 'fsamp', 'montage', 'IED', 'description', '-v7.3');
-    fprintf(1,'\b\b\b\b\b%03d%%\n', round(i_prog));
+out_root = fullfile(generated_data_folder, SUBJ, tank, 'demuse');
+if exist(out_root,'dir')==0
+    mkdir(out_root);
 end
 
-
 % Next, concatenate ALL
-fprintf(1,'Saving FULL files...000%%\n');
+fprintf(1,'Saving Demuse-Formatted files (%s)...000%%\n', tank);
 nTotal = size(T,1);
-for ii = 1:n_textiles
-    SIG = cell(8,4);
-    uni = [];
-    ref_signal = [];
-    AUXchannels = [];
-    description = strrep(strrep(char(desc_locs(ii)), ' (', ' - '), ')', '');
-    i_elec = (1:32) + ((ii-1) * 32);
-    i_prog = (ii/n_textiles)*100;
-    for iC = 1:nTotal
-        data = io.load_wrist_event_table_trial(T(iC,:), ...
-            'raw_data_folder', raw_data_folder, ...
-            'generated_data_folder', generated_data_folder);
-        uni = horzcat(uni, data.uni(i_elec,:)); %#ok<AGROW> 
-        ref_signal = horzcat(ref_signal, sqrt(double(data.x).^2 + double(data.y).^2)); %#ok<AGROW> 
-        AUXchannels = horzcat(AUXchannels, [double(data.x); double(data.y); double(data.sync)]); %#ok<AGROW> 
-        fprintf(1,'\b\b\b\b\b%03d%%\n', round(i_prog * (iC / nTotal)));
+for iT = 1:nTotal
+    data = io.load_wrist_event_table_trial(T(iT,:), ...
+        'raw_data_folder', raw_data_folder, ...
+        'generated_data_folder', generated_data_folder);
+    
+    ref_signal = sqrt(double(data.x).^2 + double(data.y).^2);
+    AUXchannels = [double(data.x); double(data.y); double(data.sync)];
+    i_prog = ((iT-1)/nTotal)*100;
+    for ii = 1:n_textiles
+        SIG = cell(8,4);
+        description = strrep(strrep(char(desc_locs(ii)), ' (', ' - '), ')', '');
+        i_elec = (1:32) + ((ii-1) * 32);
+        uni = double(data.uni(i_elec,:)); 
+        signal_length = size(uni,2);
+        r = rms(uni, 2);
+        iBad = find(r >= (mean(r) + 2*std(r)));
+        iGood = setdiff(1:32, iBad);
+        uni(iBad,:) = zeros(numel(iBad), signal_length);
+        uni(iGood,:) = uni(iGood,:) - mean(uni(iGood,:), 1);
+        for ik = 1:32
+            SIG{grid_crds(ik,1), grid_crds(ik,2)} = uni(ik, :);
+        end
+        out_p = fullfile(out_root, sprintf('Array-%d', ii), tank);
+        if exist(out_p,'dir')==0
+            try %#ok<TRYNC> 
+                mkdir(out_p);
+                fid = fopen(fullfile(out_p, 'CKC_reader.txt'), 'w');
+                fprintf(fid, '%s\n', p.Results.ckc_reader_name);
+                fclose(fid);
+            end
+        end
+        save(fullfile(out_p, sprintf(p.Results.name_expr, tank, ii, T.block(iT))), ...
+            'SIG', 'signal_length', 'ref_signal', 'AUXchannels', 'fsamp', 'montage', 'IED', 'description', '-v7.3');
+        fprintf(1,'\b\b\b\b\b%03d%%\n', round(100/nTotal * (ii / n_textiles) + i_prog));
     end
-    uni = double(uni);
-    signal_length = size(uni,2);
-    r = rms(uni, 2);
-    iBad = find(r >= (mean(r) + 2*std(r)));
-    iGood = setdiff(1:32, iBad);
-    uni(iBad,:) = zeros(numel(iBad), signal_length);
-    uni(iGood,:) = uni(iGood,:) - mean(uni(iGood,:), 1);
-    for ik = 1:32
-        SIG{grid_crds(ik,1), grid_crds(ik,2)} = uni(ik, :);
-    end
-    save(fullfile(generated_data_folder, SUBJ, tank, sprintf(p.Results.name_expr_full, tank, ii)), 'SIG', 'signal_length', 'ref_signal', 'AUXchannels', 'fsamp', 'montage', 'IED', 'description', '-v7.3');
-    fprintf(1,'\b\b\b\b\b%03d%%\n', round(i_prog));
 end
 
 end
