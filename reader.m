@@ -1,4 +1,4 @@
-function data = reader(filepath,filename,~,varargin)
+function data = reader(filepath,filename,epoch_length,options)
 %READER reads surface EMG acquired by TMSi-SAGA and arbitrary textile (monopolar 32-channel) surface array.
 % 
 % SYNTAX:
@@ -7,27 +7,18 @@ function data = reader(filepath,filename,~,varargin)
 % INPUTS:
 %   - filepath: directory with the SIG file to be loaded.
 %   - filename: EMG file to be loaded.
-%   - varargin: (Optional) 'Name',value input argument pairs
-%       - 'array_id': Should be 1 | 2 | 3 | 4 (numeric scalar) indicating 
-%               which textile is to be read. This will only read/use data 
-%               from 32 channels at a time, corresponding to one of the 
-%               textile arrays from any given recording. DEFAULT: 3 
-%                   (distal forelimb extrinsic wrist extensors)
-%       - 'montage'     : default is 'MONO'
-%       - 'IED'         : default is 8 (mm)
-%       - 'fsamp'       : default is 4000 (samples/sec)
-%       - AUXChannels   : default is [] (can be some ref vector; if left 
-%                           empty then this becomes the [x;y] potentiometer 
-%                           data tracking wrist movements)
-%       - ref_signal    : default is [] (can be some ref vector; if left
-%                           empty then this becomes the [sync] vector
-%                           tracking task state) -- in this case a 5-bit
-%                           signal tracking 
-%                           (MSB)                                   (LSB)
-%                               MOVE | O-HIT | O-VIS | I-HIT | I-VIS
-%                       Where MOVE is move onset; O-HIT is outer-target
-%                       HIT, O-VIS is outer-target visible; I-HIT is
-%                       inner-target HIT; I-VIS is inner-target visible.
+%   - epoch_length: (optional) length of the epoch of signal to be loaded (in s)
+%
+% OPTIONS:
+%   ChannelMap {mustBeMember(options.ChannelMap,{'default_tmsi_pcb_64.mat','default_tmsi_pcb_128.mat','default_tmsi_pcb_256.mat'})} = 'default_tmsi_pcb_256.mat';
+%   RawChannelMap = [];
+%   ID = [];
+%   IED (1,1) {mustBeNumeric, mustBePositive} = 8; 
+%   Montage {mustBeTextScalar, mustBeMember(options.Montage,{'MONO','SD'})} = 'SD'; 
+%   SampleRate (1,1) {mustBeNumeric, mustBePositive} = 4000;
+%   Description {mustBeTextScalar} = "No description given.";
+%   AUXchannels = [];
+%   REFchannels = [];
 %
 % OUTPUT:
 %   data: structure with the following fields;
@@ -49,46 +40,61 @@ function data = reader(filepath,filename,~,varargin)
 %
 % Adapted: Max Murphy 2022-12-13
 
-p = inputParser;
-p.addParameter('array_id', 3);
-p.addParameter('montage', 'MONO');
-p.addParameter('IED', 8);
-p.addParameter('fsamp', 4000);
-p.addParameter('AUXchannels', []);
-p.addParameter('description', 'No description given.');
-p.addParameter('ref_signal', []);
-p.parse(varargin{:});
+arguments
+    filepath
+    filename
+    epoch_length (1,1) = inf;
+    options.ChannelMap {mustBeMember(options.ChannelMap,{'default_tmsi_pcb_64.mat','default_tmsi_pcb_128.mat','default_tmsi_pcb_256.mat'})} = 'default_tmsi_pcb_256.mat';
+    options.RawChannelMap = [];
+    options.ID = [];
+    options.IED (1,1) {mustBeNumeric, mustBePositive} = 8; 
+    options.Montage {mustBeTextScalar, mustBeMember(options.Montage,{'MONO','SD'})} = 'SD'; 
+    options.SampleRate (1,1) {mustBeNumeric, mustBePositive} = 4000;
+    options.Description {mustBeTextScalar} = "No description given.";
+    options.AUXchannels = [];
+    options.REFchannels = [];
+end
 
 f=load([filepath filename]); 
-
-% Textile array indexing:
-[grid_crds(:,1), grid_crds(:,2)] = ind2sub([8,4], 1:32);
-i_elec = (1:32) + ((p.Results.array_id-1) * 32);
-
-data.SIG = {};
-for ii=1:numel(i_elec) % electrode array     
-  data.SIG{grid_crds(ii,1), grid_crds(ii,2)} = f.uni(i_elec(ii),:);      
+if ~isinf(epoch_length)
+    f.uni = f.uni(:,1:min(size(f.uni,2),epoch_length));
 end
-data.signal_length = size(f.uni, 2);
 
-if isempty(p.Results.ref_signal)
-    if p.Results.array_id > 2
+if ~isempty(options.RawChannelMap)
+    channelMap = options.RawChannelMap;
+else
+    channelMap = getfield(load(options.ChannelMap,'channelMap'),'channelMap');
+end
+
+data.SIG = cell(size(channelMap));
+n = size(f.uni,2);
+for ii=1:numel(i_elec) % electrode array
+    if channelMap(ii) > 0
+        data.SIG{ii} = f.uni(channelMap(ii),:);   
+    else
+        data.SIG{ii} = zeros(1,n);
+    end
+end
+data.signal_length = n;
+
+if isempty(options.REFchannels)
+    if options.array_id > 2
         data.ref_signal = f.sync(2,:);
     else
         data.ref_signal = f.sync(1,:);
     end
 else
-    data.ref_signal = p.Results.ref_signal;
+    data.ref_signal = options.REFchannels;
 end
 
-data.montage = p.Results.montage;
-data.IED = p.Results.IED;
-data.fsamp = p.Results.fsamp;
-if isempty(p.Results.AUXchannels)
+data.montage = options.Montage;
+data.IED = options.IED;
+data.fsamp = options.SampleRate;
+if isempty(options.AUXchannels)
     data.AUXchannels = [f.x; f.y];
 else
-    data.AUXchannels = p.Results.AUXchannels;
+    data.AUXchannels = options.AUXchannels;
 end
-data.description = p.Results.description;
+data.description = options.Description;
 
 end
