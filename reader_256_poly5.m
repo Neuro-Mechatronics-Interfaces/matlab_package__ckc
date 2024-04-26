@@ -1,8 +1,8 @@
-function data = reader(filepath,filename,epoch_length,options)
-%READER reads surface EMG acquired by TMSi-SAGA and arbitrary textile (monopolar 32-channel) surface array.
+function data = reader_256_poly5(filepath,filename,epoch_length,options)
+%READER_256_POLY5 For reading surface EMG acquired by TMSi-SAGA using Polybench and 4x 64 8x8 standard PCB grids.
 % 
 % SYNTAX:
-%   data = ckc.reader(filepath, filename, epoch_length, 'Name', value, ...);
+%   data = ckc.reader_256_poly5(filepath, filename, epoch_length, 'Name', value, ...);
 %
 % INPUTS:
 %   - filepath: directory with the SIG file to be loaded.
@@ -34,11 +34,7 @@ function data = reader(filepath,filename,epoch_length,options)
 %       AUXchannels - auxilary channels (currently not used by DEMUSEtool
 %       description - text describing the data
 %
-% -----------------------------------------------------------------------
-% Author: Ales Holobar (ales.holobar@um.si)
-% Last modified: 9. 5. 2022
-%
-% Adapted: Max Murphy 2022-12-13
+% Adapted: Max Murphy 2024-04-25
 
 arguments
     filepath
@@ -55,7 +51,8 @@ arguments
     options.REFchannels = [];
 end
 
-f=load([filepath filename]); 
+f=load(fullfile(filepath,filename));
+
 if ~isinf(epoch_length)
     f.uni = f.uni(:,1:min(size(f.uni,2),epoch_length));
 end
@@ -78,23 +75,54 @@ end
 data.signal_length = n;
 
 if isempty(options.REFchannels)
-    if options.array_id > 2
-        data.ref_signal = f.sync(2,:);
+    if isfield(f, 'sync')
+        if options.array_id > 2
+            data.ref_signal = f.sync(2,:);
+        else
+            data.ref_signal = f.sync(1,:);
+        end
     else
-        data.ref_signal = f.sync(1,:);
+        data.ref_signal = [];
     end
 else
     data.ref_signal = options.REFchannels;
 end
 
-data.montage = options.Montage;
-data.IED = options.IED;
-data.fsamp = options.SampleRate;
+if isfield(f,'montage')
+    if ismember(f.montage,{'MONO','SD'})
+        data.montage = f.montage;
+    else
+        data.montage = options.Montage;
+    end
+else
+    data.montage = options.Montage;
+end
+
+if isfield(f,'grid_spacing')
+    data.IED = f.grid_spacing;
+else
+    data.IED = options.IED;
+end
+
+if isfield(f,'sample_rate')
+    data.fsamp = f.sample_rate;
+else
+    data.fsamp = options.SampleRate;
+end
+
 if isempty(options.AUXchannels)
-    data.AUXchannels = [f.x; f.y];
+    if isfield(f, 'x') && isfield(f,'y')
+        data.AUXchannels = [f.x; f.y];
+    else
+        data.AUXchannels = [];
+    end
 else
     data.AUXchannels = options.AUXchannels;
 end
-data.description = options.Description;
 
+if isfield(f,'description')
+    data.description = f.description;
+else
+    data.description = options.Description;
+end
 end
