@@ -40,13 +40,20 @@ arguments
     poly5_file_proximal_flexor (1,1) string
     poly5_file_distal_flexor (1,1) string
     options.DataRoot {mustBeTextScalar} = "";
+    options.AlignSync (1,1) logical = true;
     options.ApplyFilter (1,1) logical = true;
+    options.ApplyCAR (1,1) logical = true;
+    options.ApplySpatialLaplacian (1,1) logical = false;
     options.HighpassFilterCutoff (1,1) double = 100;
-    options.ApplyRMSCutoff (1,1) logical = false;
+    options.ApplyRMSCutoff (1,1) logical = true;
     options.RMSCutoff (1,2) double = [1, 100];
+    options.ZeroMissing (1,1) logical = true; % Sets "missing" samples as zeros
     options.ApplyGridInterpolation (1,1) logical = true;
     options.InitialPulseOffset (1,1) {mustBeInteger} = 0; % Samples prior to first rising pulse, to include.
     options.SampleRate (1,1) double {mustBeMember(options.SampleRate, [2000, 4000])} = 2000;
+    options.Sync = []; % If specified, should be a 2 x k array where first row is time and second is sync value
+    options.SyncTarget = [];
+    options.InvertSyncLogic = [];
     options.TriggerChannelIndicator {mustBeTextScalar} = 'TRIG';
     options.TriggerBitMask = 1;
     options.ExcludedPulseIndices (1,:) {mustBeInteger,mustBePositive} = [];
@@ -63,36 +70,92 @@ if exist(output_filename,'file')~=0
     end
 end
 if strlength(options.DataRoot) == 0
-    poly5_files = [poly5_file_proximal_extensor; poly5_file_distal_extensor; poly5_file_proximal_flexor; poly5_file_distal_flexor];
+    poly5_files = [poly5_file_proximal_extensor; ...
+                   poly5_file_distal_extensor; ...
+                   poly5_file_proximal_flexor; ...
+                   poly5_file_distal_flexor];
 else
     poly5_files = [fullfile(options.DataRoot,poly5_file_proximal_extensor); ...
                    fullfile(options.DataRoot,poly5_file_distal_extensor); ...
                    fullfile(options.DataRoot,poly5_file_proximal_flexor); ...
                    fullfile(options.DataRoot,poly5_file_distal_flexor)];
 end
-
-data = io.load_align_saga_data_many(poly5_files, ...
+if numel(options.TriggerBitMask) == 1
+    triggerBitMask = ones(numel(poly5_files),1).*options.TriggerBitMask;
+else
+    triggerBitMask = options.TriggerBitMask;
+end
+[data,~,ch_name] = io.load_align_saga_data_many(poly5_files, ...
     'ApplyFilter', options.ApplyFilter, ...
+    'ApplyCAR', options.ApplyCAR, ...
     'HighpassFilterCutoff', options.HighpassFilterCutoff, ...
     'ApplyRMSCutoff', options.ApplyRMSCutoff, ...
     'RMSCutoff', options.RMSCutoff, ...
+    'ZeroMissing',options.ZeroMissing,...
     'ApplyGridInterpolation', options.ApplyGridInterpolation, ...
-    'ApplySpatialLaplacian', false, ...
+    'ApplySpatialLaplacian', options.ApplySpatialLaplacian, ...
     'InitialPulseOffset', options.InitialPulseOffset, ...
+    'InvertLogic', options.InvertSyncLogic, ...
     'SampleRate', options.SampleRate, ...
     'TriggerChannelIndicator', options.TriggerChannelIndicator, ...
-    'TriggerBitMask', options.TriggerBitMask, ...
+    'TriggerBitMask', triggerBitMask, ...
     'ExcludedPulseIndices', options.ExcludedPulseIndices);
-[iUni,iBip,iTrig] = ckc.get_saga_channel_masks(data.channels,...
+[iUni,iBip,iTrig] = ckc.get_saga_channel_masks(ch_name,...
     'ReturnNumericIndices',true);
 uni = data.samples(iUni,:);
 sample_rate = data.sample_rate;
 ii = 1;
 sync = data.samples(iTrig(1),:);
+if isempty(options.InvertSyncLogic)
+    sync = double(bitand(data.samples,triggerBitMask(1))==triggerBitMask(1));
+else
+    if numel(options.InvertSyncLogic) > 1
+
+    else
+        if options.InvertSyncLogic
+            sync = double(bitand(data.samples,triggerBitMask(1))~=triggerBitMask(1));
+        else
+            sync = double(bitand(data.samples,triggerBitMask(1))==triggerBitMask(1));
+        end
+    end
+end
+
 while ((ii < numel(iTrig)) && (numel(unique(sync))<2))
     ii = ii + 1;
-    sync = data.samples(iTrig(ii),:);
+    if isempty(options.InvertSyncLogic)
+        sync = double(bitand(data.samples,triggerBitMask(ii))==triggerBitMask(ii));
+    else
+        if numel(options.InvertSyncLogic) > 1
+    
+        else
+            if options.InvertSyncLogic
+                sync = double(bitand(data.samples,triggerBitMask(ii))~=triggerBitMask(ii));
+            else
+                sync = double(bitand(data.samples,triggerBitMask(ii))==triggerBitMask(ii));
+            end
+        end
+    end
 end
+t_data = 0:(1/data.sample_rate):((numel(sync)-1)/data.sample_rate);
+t_start = t_data(find(sync > 0,1,'first'));
+if ~isempty(options.Sync)
+    if options.AlignSync
+        sync_in = [0, 0, options.Sync(2,:), 0, 0];
+        sync_time = options.Sync(1,:) + t_start;
+        sync_time = [0, sync_time(1)-(1/data.sample_rate), sync_time, sync_time(end)+(1/data.sample_rate), t_data(end)];
+        sync = interp1(sync_time, sync_in, t_data, 'linear');
+    else
+        sync = options.Sync;
+    end
+end
+if ~isempty(options.SyncTarget)
+    sync_in = [0, options.SyncTarget(:,2)', 0];
+    sync_time = options.SyncTarget(:,1)' + t_start;
+    [sync_time, ikeep] = unique([0, sync_time, t_data(end)]);
+    sync_out = interp1(sync_time, sync_in(ikeep), t_data, 'previous');
+    sync = [sync; sync_out];
+end
+
 if numel(iBip) > 0
     aux = data.samples(iBip(1),:);
 else

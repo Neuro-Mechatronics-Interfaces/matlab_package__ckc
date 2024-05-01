@@ -72,7 +72,7 @@ for ii=1:numel(i_elec) % electrode array
         data.SIG{ii} = zeros(1,n);
     end
 end
-data.signal_length = n;
+data.signal_length = n;monk
 
 if isempty(options.REFchannels)
     if isfield(f, 'sync')
