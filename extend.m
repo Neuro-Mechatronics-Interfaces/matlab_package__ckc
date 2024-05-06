@@ -23,18 +23,4 @@ for k=1:r
     end
 end
 
-% [r,c]=size(S);
-% eS=zeros(r*extFact,c);
-%
-% for k=1:r
-%     for m=0:extFact-1
-%         if m == 0
-%             eS((k-1)*extFact+m+1,:)=[zeros(1,m) S(k,:)];
-%         else
-%             tmp = diff(S(k,:),m);
-%             eS((k-1)*extFact+m+1,:)=[zeros(1,m) tmp/max(tmp)*max(S(k,:))];
-%         end
-%     end
-% end
-
 end
