@@ -57,6 +57,7 @@ arguments
     options.TriggerChannelIndicator {mustBeTextScalar} = 'TRIG';
     options.TriggerBitMask = 1;
     options.ExcludedPulseIndices (1,:) {mustBeInteger,mustBePositive} = [];
+    options.IsTextile64 (1,1) logical = true;
     options.Description {mustBeTextScalar} = "1-64 = PROX-EXT; 65-128 = DIST-EXT; 129-192 = PROX-FLX; 193-256 = DIST-FLX."
 end
 
@@ -80,7 +81,7 @@ else
                    fullfile(options.DataRoot,poly5_file_proximal_flexor); ...
                    fullfile(options.DataRoot,poly5_file_distal_flexor)];
 end
-if numel(options.TriggerBitMask) == 1
+if isscalar(options.TriggerBitMask)
     triggerBitMask = ones(numel(poly5_files),1).*options.TriggerBitMask;
 else
     triggerBitMask = options.TriggerBitMask;
@@ -99,6 +100,7 @@ end
     'SampleRate', options.SampleRate, ...
     'TriggerChannelIndicator', options.TriggerChannelIndicator, ...
     'TriggerBitMask', triggerBitMask, ...
+    'IsTextile64', options.IsTextile64, ...
     'ExcludedPulseIndices', options.ExcludedPulseIndices);
 [iUni,iBip,iTrig] = ckc.get_saga_channel_masks(ch_name,...
     'ReturnNumericIndices',true);
