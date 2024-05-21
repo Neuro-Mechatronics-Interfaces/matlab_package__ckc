@@ -47,7 +47,7 @@ else
     samples = nan(nMin,size(channelMap,1),size(channelMap,2));
     useSampleGrid = true;
 end
-if numel(options.NumChannelsPerGrid) == 1
+if isscalar(options.NumChannelsPerGrid)
     nChannelsPerGrid = ones(1,nGrid)*options.NumChannelsPerGrid;
 elseif numel(options.NumChannelsPerGrid)~=nGrid
     error("If specified as an array, NumChannelsPerGrid element count (%d) must equal number of elements in `data` (%d).", numel(options.NumChannelsPerGrid), nGrid);
