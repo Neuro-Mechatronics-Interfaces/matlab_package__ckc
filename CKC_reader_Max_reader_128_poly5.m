@@ -1,8 +1,8 @@
-function data = reader_256_poly5(filepath,filename,epoch_length,options)
-%READER_256_POLY5 For reading surface EMG acquired by TMSi-SAGA using Polybench and 4x 64 8x8 standard PCB grids.
+function data = CKC_reader_Max_reader_128_poly5(filepath,filename,epoch_length,options)
+%CKC_READER_MAX_READER_128_POLY5_GUI_BUGFIX For reading surface EMG acquired by TMSi-SAGA using Polybench and 4x 64 8x8 standard PCB grids.
 % 
 % SYNTAX:
-%   data = ckc.reader_256_poly5(filepath, filename, epoch_length, 'Name', value, ...);
+%   data = CKC_reader_Max_reader_128_poly5_gui_bugfix(filepath, filename, epoch_length, 'Name', value, ...);
 %
 % INPUTS:
 %   - filepath: directory with the SIG file to be loaded.
@@ -10,7 +10,7 @@ function data = reader_256_poly5(filepath,filename,epoch_length,options)
 %   - epoch_length: (optional) length of the epoch of signal to be loaded (in s)
 %
 % OPTIONS:
-%   ChannelMap {mustBeMember(options.ChannelMap,{'default_tmsi_pcb_64.mat','default_tmsi_pcb_128.mat','default_tmsi_pcb_256.mat'})} = 'default_tmsi_pcb_256.mat';
+%   ChannelMap {mustBeMember(options.ChannelMap,{'default_tmsi_pcb_64.mat','default_tmsi_pcb_128.mat','default_tmsi_pcb_254_gui_bugfix.mat'default_tmsi_pcb_256.mat'})} = 'default_tmsi_pcb_254_gui_bugfix.mat';
 %   RawChannelMap = [];
 %   ID = [];
 %   IED (1,1) {mustBeNumeric, mustBePositive} = 8; 
@@ -40,13 +40,13 @@ arguments
     filepath
     filename
     epoch_length (1,1) = inf;
-    options.ChannelMap {mustBeMember(options.ChannelMap,{'default_tmsi_pcb_64.mat','default_tmsi_pcb_128.mat','default_tmsi_pcb_256.mat'})} = 'default_tmsi_pcb_256.mat';
-    options.RawChannelMap = [];
+    options.ChannelMap {mustBeMember(options.ChannelMap,{'default_tmsi_pcb_64.mat','default_tmsi_pcb_128.mat','default_tmsi_pcb_254_gui_bugfix.mat','default_tmsi_pcb_256.mat'})} = 'default_tmsi_pcb_254_gui_bugfix.mat';
+    options.RawChannelMap = reshape(1:128,8,16);
     options.ID = [];
-    options.IED (1,1) {mustBeNumeric, mustBePositive} = 8; 
-    options.Montage {mustBeTextScalar, mustBeMember(options.Montage,{'MONO','SD'})} = 'SD'; 
-    options.SampleRate (1,1) {mustBeNumeric, mustBePositive} = 4000;
-    options.Description {mustBeTextScalar} = "No description given.";
+    options.IED (1,1) {mustBeNumeric, mustBePositive} = 8.75; % mm 
+    options.Montage {mustBeTextScalar, mustBeMember(options.Montage,{'MONO','SD'})} = 'MONO'; 
+    options.SampleRate (1,1) {mustBeNumeric, mustBePositive} = 2000;
+    options.Description char {mustBeTextScalar} = 'No description given.';
     options.AUXchannels = [];
     options.REFchannels = [];
 end
@@ -65,44 +65,28 @@ end
 
 data.SIG = cell(size(channelMap));
 n = size(f.uni,2);
-for ii=1:numel(i_elec) % electrode array
+for ii=1:numel(channelMap) % electrode array
     if channelMap(ii) > 0
         data.SIG{ii} = f.uni(channelMap(ii),:);   
     else
         data.SIG{ii} = zeros(1,n);
     end
 end
-data.signal_length = n;monk
 
 if isempty(options.REFchannels)
     if isfield(f, 'sync')
-        if options.array_id > 2
-            data.ref_signal = f.sync(2,:);
-        else
-            data.ref_signal = f.sync(1,:);
-        end
+        data.ref_signal = f.sync;
+        
     else
         data.ref_signal = [];
     end
 else
     data.ref_signal = options.REFchannels;
 end
+data.signal_length = n;
 
-if isfield(f,'montage')
-    if ismember(f.montage,{'MONO','SD'})
-        data.montage = f.montage;
-    else
-        data.montage = options.Montage;
-    end
-else
-    data.montage = options.Montage;
-end
-
-if isfield(f,'grid_spacing')
-    data.IED = f.grid_spacing;
-else
-    data.IED = options.IED;
-end
+data.montage = options.Montage;
+data.IED = options.IED;
 
 if isfield(f,'sample_rate')
     data.fsamp = f.sample_rate;
@@ -121,7 +105,7 @@ else
 end
 
 if isfield(f,'description')
-    data.description = f.description;
+    data.description = char(f.description);
 else
     data.description = options.Description;
 end
