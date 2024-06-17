@@ -15,7 +15,8 @@ fig = figure('Color', 'w', 'Name', 'Nearest-Neighbor Deltas');
 ax = axes(fig,'NextPlot','add','FontName','Tahoma');
 
 k = size(Delta,1);
-title(ax,sprintf('\\Delta(%d) (N = %d)', k, size(Delta,2)), "FontName",'Color','k');
+title(ax,sprintf('\\Delta(%d) (N = %d)', k, size(Delta,2)), ...
+    "FontName",'Tahoma','Color','k');
 x = 1:size(Delta,2);
 x_offset = linspace(0, 0.5, k);
 cdata = colormap(jet(k));
