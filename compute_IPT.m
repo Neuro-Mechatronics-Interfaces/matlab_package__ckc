@@ -44,7 +44,7 @@ warning('off','signal:findpeaks:largeMinPeakHeight');
 iCounter = 0;
 newPulses = [];
 newThreshold = options.IPTThreshold;
-while (iCounter < options.MaxThresholdAdjustments)
+while (iCounter < options.MaxThresholdAdjustments) && ~any(isnan(IPT))
     [~,newPulses] = findpeaks(IPT,'MinPeakHeight',newThreshold);
     if ~isempty(newPulses)
         break;

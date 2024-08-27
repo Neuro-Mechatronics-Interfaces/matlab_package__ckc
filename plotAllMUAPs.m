@@ -1,4 +1,4 @@
-function plotAllMUAPs(MUAPs,MU_ID,Fsamp,mm,BackColor,FrontColor)
+function plotAllMUAPs(MUAPs,MU_ID,Fsamp,BackColor,FrontColor)
 Fontssize1 =10;
 YLimMin=10000;
 YLimMax=0;

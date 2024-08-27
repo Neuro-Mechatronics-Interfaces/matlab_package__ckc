@@ -52,7 +52,8 @@ arguments
     options.ColorMap (256,3) double {mustBeInRange(options.ColorMap,0,1)} = jet(256);
     options.Title {mustBeTextScalar} = "";
     options.Subtitle {mustBeTextScalar} = "";
-    options.SortMethod {mustBeMember(options.SortMethod, {'None', 'Recruitment'})} = 'Recruitment';
+    options.ManualSortOrder = [];
+    options.SortMethod {mustBeMember(options.SortMethod, {'None', 'Manual', 'Recruitment'})} = 'Recruitment';
     options.YLabelLeft {mustBeTextScalar} = "Motor Unit";
     options.YLabelRight {mustBeTextScalar} = "Instantaneous Discharge Rate (pps)";
     options.FontSize (1,1) {mustBePositive} = 12;
@@ -103,6 +104,13 @@ end
 switch options.SortMethod
     case 'None'
         sortVector = 1:r;
+    case 'Manual'
+        if numel(options.ManualSortOrder) == r
+            sortVector = reshape(options.ManualSortOrder,1,r);
+        else
+            warning('ManualSortOrder must have exactly %d elements (corresponding to indexed elements of MUPulses input). Using "None" for SortMethod instead.', r);
+            sortVector = 1:r;
+        end
     case 'Recruitment'
         sortVector = ckc.sortByRecruitmentOrder(MUPulses);
     otherwise

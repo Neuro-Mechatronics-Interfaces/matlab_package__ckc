@@ -54,7 +54,7 @@ arguments
     options.WeightKurtosis (1,1) double = -0.005;
     options.WeightVariance (1,1) double = 50;
     options.WeightRatePenalty (1,1) double = 0.25;
-    options.MaxNonPenalizedRate (1,1) double = 40;
+    options.MaxNonPenalizedRate (1,1) double = 60;
     options.MaxStrikes (1,1) {mustBeInteger, mustBePositive} = 10;
     options.PreferredIntervalTolerance (1,1) double = 0.2;
     options.InverseCovarianceMatrix = [];
