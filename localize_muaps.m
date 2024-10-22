@@ -13,12 +13,18 @@ function [i_source, pk2pk, snips, tsnip] = localize_muaps(data_sync, data_cleane
 arguments
     data_sync    struct % Data as loaded from the synchronized single-file from TMSi
     data_cleaned struct % Data as loaded from the CKC decomposition output files
+    options.ChannelOrder (1,:) = nan;
     options.MinNumberMUAPs (1,1) = 20;
     options.NumChannels (1,1) {mustBePositive, mustBeInteger} = 256;
     options.Vector (1,:) = -18:18;
     options.SampleRate (1,1) = 2000;
     options.SpatialFilter {mustBeMember(options.SpatialFilter,{'None','MONO','SD Rows','SD Cols','Laplacian','CAR'})} = 'None';
     options.Verbose (1,1) logical = true;
+end
+if isnan(options.ChannelOrder(1))
+    channelOrder = 1:size(data_sync.uni,1);
+else
+    channelOrder = options.ChannelOrder;
 end
 N = numel(data_cleaned.MUPulses);
 i_source = nan(N,1);
@@ -38,7 +44,7 @@ for ii = 1:N
     mask = data_cleaned.MUPulses{ii} + vec;
     snips{ii} = nan(nT, options.NumChannels, nPulse);
     for iCh = 1:options.NumChannels
-        tmp = data_sync.uni(iCh,:);
+        tmp = data_sync.uni(channelOrder(iCh),:);
         snips{ii}(:,iCh,:) = tmp(mask);
     end
 
