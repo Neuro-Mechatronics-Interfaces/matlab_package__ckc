@@ -40,6 +40,7 @@ arguments
     poly5_file_proximal_flexor (1,1) string
     poly5_file_distal_flexor (1,1) string
     options.DataRoot {mustBeTextScalar} = "";
+    options.Debug (1,1) logical = false;
     options.UseFirstSampleIfNoSyncPulse (1,1) logical = true;
     options.AlignSync (1,1) logical = true;
     options.ApplyFilter (1,1) logical = true;
@@ -59,6 +60,7 @@ arguments
     options.TriggerBitMask = 1;
     options.ExcludedPulseIndices (1,:) {mustBeInteger,mustBePositive} = [];
     options.IsTextile64 (1,1) logical = true;
+    options.SwappedTextileCables (1,4) logical = false(1,4);
     options.Description {mustBeTextScalar} = "1-64 = PROX-EXT; 65-128 = DIST-EXT; 129-192 = PROX-FLX; 193-256 = DIST-FLX."
 end
 
@@ -90,6 +92,7 @@ end
 [data,~,ch_name] = io.load_align_saga_data_many(poly5_files, ...
     'ApplyFilter', options.ApplyFilter, ...
     'ApplyCAR', options.ApplyCAR, ...
+    'Debug', options.Debug, ...
     'HighpassFilterCutoff', options.HighpassFilterCutoff, ...
     'ApplyRMSCutoff', options.ApplyRMSCutoff, ...
     'RMSCutoff', options.RMSCutoff, ...
@@ -102,6 +105,7 @@ end
     'TriggerChannelIndicator', options.TriggerChannelIndicator, ...
     'TriggerBitMask', triggerBitMask, ...
     'IsTextile64', options.IsTextile64, ...
+    'SwappedTextileCables', options.SwappedTextileCables, ...
     'UseFirstSampleIfNoSyncPulse', options.UseFirstSampleIfNoSyncPulse, ...
     'ExcludedPulseIndices', options.ExcludedPulseIndices);
 [iUni,iBip,iTrig] = ckc.get_saga_channel_masks(ch_name,...
@@ -110,6 +114,7 @@ uni = data.samples(iUni,:);
 sample_rate = data.sample_rate;
 ii = 1;
 sync = data.samples(iTrig(1),:);
+all_sync = data.samples(iTrig,:);
 if isempty(options.InvertSyncLogic)
     sync = double(bitand(data.samples,triggerBitMask(1))==triggerBitMask(1));
 else
@@ -172,6 +177,6 @@ if strlength(p) > 0
         mkdir(p);
     end
 end
-save(output_filename,'uni','aux','sync','sample_rate','description','-v7.3');
+save(output_filename,'uni','aux','sync','all_sync','sample_rate','description','-v7.3');
 
 end
