@@ -11,6 +11,7 @@ function [PNR, PNR_Label] = batch_compute_PNR_and_Label(data)
 N = numel(data.MUPulses);
 PNR = nan(N,1);
 PNR_Label = cell(1,N);
+
 for ii = 1:N
     PNR(ii) = ckc.compute_PNR(data.MUPulses{ii},data.IPTs(ii,:),data.fsamp);
     PNR_Label{ii} = sprintf('%s (%4.1f dB)', data.MUIDs{ii}, round(PNR(ii),1));

@@ -1,4 +1,4 @@
-function [fig, MUPulses, IDR_Value] = plotIDR(MUPulses,MU_ID,ref_signal,fsamp,options)
+function [fig, MUPulses, IDR_Value, sortVector] = plotIDR(MUPulses,MU_ID,ref_signal,fsamp,options)
 %PLOT_IDR Plots MU instantaneous discharge rate.
 % 
 % Syntax: 

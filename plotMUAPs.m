@@ -29,7 +29,9 @@ arguments
     options.Title {mustBeTextScalar} = "";
     options.Subtitle {mustBeTextScalar} = "";
     options.FontName = 'Tahoma';
-    options.FontSize = 10;
+    options.FontSize = 14;
+    options.YScale = 0.75;
+    options.YBarHeight = 100; % uV
 end
 
 YLimMin=10000;
@@ -69,12 +71,17 @@ for r=1:rY
     end
 end
 
-dh = 1.5*max(tmp);
+dh = options.YScale*max(tmp);
 
-yLineHight = round(max(tmp)*1000)/1000;
-if yLineHight > 10
-    yLineHight = floor(max(tmp)/10)*10;
+if isempty(options.YBarHeight)
+    yLineHeight = round(dh*1000)/1000;
+    if yLineHeight > 10
+        yLineHeight = floor(max(tmp)/10)*10;
+    end
+else
+    yLineHeight = options.YBarHeight;
 end
+
 xLineWidth = 10/(2*T/fsamp*1000)/1.05;
 
 for k=1:figInRow
@@ -108,15 +115,15 @@ set(hAx,'XTick',[]);
 set(hAx,'Units','normalized');
 set(hAx,'Position',[0.02,0.02,0.96,0.9]);
 
-plot(cY+xLineWidth*[1,2],-dh+ [0,0],'Color',options.FrontColor,'LineWidth',2);
-plot(cY+xLineWidth*[1,1],-dh+ [-yLineHight/3,+yLineHight/3],'Color',options.FrontColor,'LineWidth',2);
-plot(cY+xLineWidth*[2,2],-dh+ [-yLineHight/3,+yLineHight/3],'Color',options.FrontColor,'LineWidth',2);
-text(cY+xLineWidth*1.5,-dh-yLineHight,'10 ms','VerticalAlignment','middle','HorizontalAlignment','center','Color',options.FrontColor,'FontSize',options.FontSize);
+plot(cY+xLineWidth*[1,2],-dh/2+ [0,0],'Color',options.FrontColor,'LineWidth',2);
+plot(cY+xLineWidth*[1,1],-dh/2+ [-yLineHeight/10,+yLineHeight/10],'Color',options.FrontColor,'LineWidth',2);
+plot(cY+xLineWidth*[2,2],-dh/2+ [-yLineHeight/10,+yLineHeight/10],'Color',options.FrontColor,'LineWidth',2);
+text(cY+xLineWidth*1.5,-dh/2-yLineHeight/10-10,'10 ms','VerticalAlignment','middle','HorizontalAlignment','center','Color',options.FrontColor,'FontName','Tahoma','FontSize',options.FontSize);
 
-plot(cY+xLineWidth*[3,3],-dh+[0,yLineHight],'Color',options.FrontColor,'LineWidth',2);
-plot(cY+xLineWidth*3+[-xLineWidth/3,+xLineWidth/3],-dh + [0,0],'Color',options.FrontColor,'LineWidth',2);
-plot(cY+xLineWidth*3+[-xLineWidth/3,+xLineWidth/3],-dh + [yLineHight,yLineHight],'Color',options.FrontColor,'LineWidth',2);
-text(cY+xLineWidth*3+1.5*xLineWidth/3,-dh+yLineHight/2,[num2str(yLineHight) ' \muV'],'VerticalAlignment','middle','HorizontalAlignment','left','Color',options.FrontColor,'FontSize',options.FontSize);
+plot(cY+xLineWidth*[3,3],-dh/2+[0,yLineHeight],'Color',options.FrontColor,'LineWidth',2);
+plot(cY+xLineWidth*3+[-xLineWidth/3,+xLineWidth/3],-dh/2 + [0,0],'Color',options.FrontColor,'LineWidth',2);
+plot(cY+xLineWidth*3+[-xLineWidth/3,+xLineWidth/3],-dh/2 + [yLineHeight,yLineHeight],'Color',options.FrontColor,'LineWidth',2);
+text(cY+xLineWidth*3+1.5*xLineWidth/3,-dh/2+yLineHeight/2,[num2str(yLineHeight) ' \muV'],'VerticalAlignment','middle','HorizontalAlignment','left','Color',options.FrontColor,'FontName','Tahoma','FontSize',options.FontSize);
 
 set(hAx,'Color',options.BackColor);
 set(hAx,'XColor',options.BackColor);
