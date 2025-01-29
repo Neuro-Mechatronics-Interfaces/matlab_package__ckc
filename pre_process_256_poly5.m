@@ -46,6 +46,7 @@ arguments
     options.ApplyFilter (1,1) logical = true;
     options.ApplyCAR (1,1) logical = true;
     options.ApplySpatialFilter (1,1) logical = false;
+    options.ChannelMap (1,256) double {mustBePositive, mustBeInteger, mustBeInRange(options.ChannelMap,1,256)} = 1:256;
     options.HighpassFilterCutoff (1,1) double = 100;
     options.ApplyRMSCutoff (1,1) logical = true;
     options.RMSCutoff (1,2) double = [1, 100];
@@ -59,7 +60,7 @@ arguments
     options.TriggerChannelIndicator {mustBeTextScalar} = 'TRIG';
     options.TriggerBitMask = 1;
     options.ExcludedPulseIndices (1,:) {mustBeInteger,mustBePositive} = [];
-    options.IsTextile64 (1,1) logical = true;
+    options.IsTextile64 (:,1) logical = true;
     options.SwappedTextileCables (1,4) logical = false(1,4);
     options.Description {mustBeTextScalar} = "1-64 = PROX-EXT; 65-128 = DIST-EXT; 129-192 = PROX-FLX; 193-256 = DIST-FLX."
 end
@@ -111,6 +112,8 @@ end
 [iUni,iBip,iTrig] = ckc.get_saga_channel_masks(ch_name,...
     'ReturnNumericIndices',true);
 uni = data.samples(iUni,:);
+uni = uni(options.ChannelMap,:);
+
 sample_rate = data.sample_rate;
 ii = 1;
 sync = data.samples(iTrig(1),:);
