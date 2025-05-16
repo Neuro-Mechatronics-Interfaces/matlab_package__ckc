@@ -110,6 +110,7 @@ uni = data.samples(iUni,:);
 sample_rate = data.sample_rate;
 ii = 1;
 sync = data.samples(iTrig(1),:);
+all_sync = data.samples(iTrig,:);
 if isempty(options.InvertSyncLogic)
     sync = double(bitand(data.samples,triggerBitMask(1))==triggerBitMask(1));
 else
@@ -168,6 +169,6 @@ if strlength(p) > 0
         mkdir(p);
     end
 end
-save(output_filename,'uni','aux','sync','sample_rate','description','-v7.3');
+save(output_filename,'uni','aux','all_sync','sync','sample_rate','description','-v7.3');
 
 end
